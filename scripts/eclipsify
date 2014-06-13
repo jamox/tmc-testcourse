@@ -5,9 +5,9 @@ include FileUtils
 cd File.dirname(File.dirname(__FILE__))
 
 if !ARGV[0] || ['-h', '--help'].include?(ARGV[0])
-  puts"Creates a new project from the project template."
+  puts"Upgrades project configs to support eclipse."
   puts
-  puts "Usage: #{__FILE__} [category/]project-name"
+  puts "Usage: ./eclipsify "
   puts
   exit 0
 end
@@ -16,35 +16,21 @@ source = ARGV[0]
 dest = "#{source}_eclipse"
 sample = File.join("scripts", "sample_project")
 
+
+#template_name = 'template_project'
+#template_path = "private/#{template_name}"
+
+
+# Files to move:
 cp_r source, dest
 
-cp_r File.join(sample, ".project"), dest
-cp_r File.join(sample, ".classpath"), dest
-cp_r File.join(sample, ".settings"), dest
-
+['.project', '.classpath', '.settings'].each do |file|
+  cp_r File.join(sample, file), dest
+end
 # fix .classpath
 #
-classpath = IO.read(File.join(sample, ".classpath"))
-jars = Dir.glob(File.join(dest, 'lib', '**/*'))
-class_path = jars.inject("") do |acc, elem|
-  elem = elem.split("/")[1..-1].join("/")
-  acc << "<classpathentry kind=\"lib\" path=\"#{elem}\" />\n"
-end
-
-classpath.gsub!("<insert_class_path_here />", class_path)
-File.write(File.join(dest, '.classpath'), classpath)
 
 
-project_file = File.read(File.join(dest, '.project'))
-contents = project_file.gsub("NAME_HERE", ARGV[0].split("/")[-1])
-File.write(File.join(dest, '.project'), contents)
-
-
-
-
-
-
-=begin
 def gsub_in_file!(filename, search, replacement)
   text = File.read(filename)
   text.gsub!(search, replacement)
@@ -52,13 +38,29 @@ def gsub_in_file!(filename, search, replacement)
 end
 
 
-dest_path = ARGV[0]
 
-dest_category = dest_path.split('/').reverse.drop(1).reverse.join('/')
-dest_name = dest_path.split('/').last
 
-template_name = 'template_project'
-template_path = "private/#{template_name}"
+
+# ClassPath
+class_path = Dir.glob(File.join(dest, 'lib', '**/*')).inject("") do |acc, elem|
+  elem = elem.split("/")[1..-1].join("/")
+  acc << "<classpathentry kind=\"lib\" path=\"#{elem}\" />\n"
+end
+gsub_in_file!(File.join(dest, '.classpath'), '<insert_class_path_here />', class_path)
+
+
+  # Project
+gsub_in_file!(File.join(dest, '.project'), 'NAME_HERE', ARGV[0].split('/')[-1])
+
+
+
+
+
+
+=begin
+
+
+
 
 puts "Copying from #{template_path} to #{dest_path}"
 mkdir_p dest_category unless dest_category.empty?
